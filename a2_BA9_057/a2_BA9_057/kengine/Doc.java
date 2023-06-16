@@ -8,254 +8,198 @@ import utils.NotPossibleException;
 
 
 /**
- * @overview A document contains a title and a text body
- * 
- * @see "Program Development in Java", pgs: 314,322,333
  * @version 1.0
- * 
+ * @overview A document class store title, text body, etc, ...
  */
 public class Doc {
-  private String d; // the document content
-  private String title; // the document title
-  private String body; // the document body
+private String dContent;
+private String title;
+private String body;
+private Vector vector; // the sequence of document words
 
-  private Vector documentwords; // the sequence of document words
+/**
+ * Constructor
+ *
+ * @param dContent A string that contains the document content
+ * @effects If d cannot be handled as a document, a NotPossibleException is thrown. Otherwise, code>this/code> becomes the document that corresponds to code>d/code>.
+ */
+public Doc(String dContent) throws NotPossibleException {
+  this.dContent = dContent;
+}
 
-  /**
-   * Constructor method
-   * 
-   * @param d
-   *          A string that contains the document content
-   * @effects if d cannot be processed as a document throws
-   *          <code>NotPossibleException</code> else makes <code>this</code> be
-   *          the <code>Doc</code> corresponding to <code>d</code>
-   * 
-   */
-  public Doc(String d) throws NotPossibleException {
-    // check that d is an HTML file
-    // stores this content for processing later
-    this.d = d;
-  }
-
-  /**
-   * A method to return the title of this document.
-   * 
-   * @effects returns the title of <code>this</code>
-   */
-  public String title() {
-    // scans the document content once to extract its title
-    // stores the title into the title attribute to use later
-    if (title == null) {
-      // note that we donot scan the entire body at this stage,
-      // only up to the <title> tag
-      int tind1 = d.indexOf("<title>");
-      int tind2 = d.indexOf("</title>"); // must be well-formed
-      if (tind1 < 0) {
-        tind1 = d.indexOf("<TITLE>"); // possibly upper case
-        tind2 = d.indexOf("</TITLE>");
-      }
-
-      if (tind1 >= 0 && tind2 >= 0) {
-        // extract only the title text
-        title = d.substring(tind1 + 7, tind2);
-      }
+/**
+ * @effects get title
+ */
+public String takeTitle() {
+  if (title == null) {
+    int i = dContent.indexOf("<title>");
+    int i1 = dContent.indexOf("</title>"); // must be well-formed
+    if (i < 0) {
+      i = dContent.indexOf("<TITLE>"); // possibly upper case
+      i1 = dContent.indexOf("</TITLE>");
     }
-
-    return title;
-  }
-
-  /**
-   * A method to return the body of this document.
-   * 
-   * @effects returns the body of <code>this</code>
-   */
-  public String body() {
-    // scans the document content once to extract its body
-    // stores the body into the body attribute to use later
-    if (body == null) {
-      // note that we do not scan the entire body at this stage,
-      // only up to the <title> tag
-      int bind1 = d.indexOf("<body");
-      int bind2 = d.indexOf("</body>"); // must be well-formed
-      if (bind1 < 0) {
-        bind1 = d.indexOf("<BODY"); // possibly upper case
-        bind2 = d.indexOf("</BODY>");
-      }
-
-      if (bind1 >= 0 && bind2 >= 0) {
-        // we want to keep the <body</body> tag pairs in
-        // the body text
-        body = d.substring(bind1, bind2 + 7);
-      }
+    if (i >= 0 && i1 >= 0) {
+      title = dContent.substring(i + 7, i1);
     }
-
-    return body;
   }
+  return title;
+}
 
-  /**
-   * A method that is used to iterate over all the words in <code>this</code> in the order
-   * that of their apperance.
-   * 
-   * @effects returns a generator that will yield all the words in the document
-   *          as strings in the order they appear in the text
-   *          <p>
-   * 
-   *          This implementation also parses the Javascript text that is
-   *          contained between the <code>&lt;script&gt;&lt;/script&gt;</code>
-   *          tags.
-   */
-  public Iterator words() {
-    // extracts body
-    body();
+/**
+ * @effects getBody
+ */
+public String takeBody() {
+  if (body == null) {
+    int b1 = dContent.indexOf("<body");
+    int b2 = dContent.indexOf("</body>");
+    if (b1 < 0) {
+      b1 = dContent.indexOf("<BODY");
+      b2 = dContent.indexOf("</BODY>");
+    }
+    if (b2 >= 0 && b1 >= 0) {
+      // we want to keep the <body</body> tag pairs in
+      // the body text
+      body = dContent.substring(b1, b2 + 7);
+    }
+  }
+  return body;
+}
 
-    // scans the body to return only words (without tags)
-    // assumes that Doc is immutable
-    // note: recall that body has the enclosing <body></body> tag pairs
-    if (documentwords == null) {
-      documentwords = new Vector();
-      final char OPEN_TAG = '<';
-      final char CLOSED_TAG = '>';
-      // final char FORWARD_SLASH = '/';
-      final char NEW_LINE = '\n';
-      final String[] SPECIALS = { NEW_LINE+"", "\t" };
-      final boolean SKIP_SPECIAL_HTML = true;
-      //final String[] JUNK_CHARS = { "`","``","''","(",")","-","[","]",":",";","\"",".",",","...","<",">"}; 
-                 
-      // reads the content one character at a time, stop each time
-      // we get to a stop-word (e.g. space or a tag)
-      char[] chars = body.toCharArray();
-      char c;
-      String w = null;
-      String reading = null;
-      boolean skip = false;
-      for (int i = 0; i < chars.length; i++) {
+/**
+ * @overview a technique that iterates through each word in code>this/code> in the order that they appear.
+ * @effects produces a generator that will produce each word in the text as a string in the order it appears in the text.
+ * Additionally, this solution parses the embedded Javascript content.
+ */
+public Iterator takeWords() {
+  takeBody();
+  if (vector == null) {
+    vector = new Vector();
+    final char openTag = '<';
+    final char closedtag = '>';
 
-        c = chars[i];
+    final char c1 = '\n';
+    final String[] strings = {c1 + "", "\t"};
+    final boolean skiphtml = true;
+    char[] chars = body.toCharArray();
+    char cc;
+    String o = null;
+    String read = null;
+    boolean s = false;
+    for (int i = 0; i < chars.length; i++) {
 
-        // if we have found a new open tag
-        if (!skip && c == OPEN_TAG) {
-          // skip to locate the next closing and stop chars
-          skip = true;
-          reading = "";
-          continue;
-        }
+      cc = chars[i];
 
-        if (skip) {
-          reading += c;
-          // check closing and stop tags
-          if (c == CLOSED_TAG) { // end of opening tag, beginning text
-            // if told to skip special tags and reading
-            // so far shows that it is some special tag then do nothing
-            if (SKIP_SPECIAL_HTML) {
-              // skip <script> and <style>
-              if (!(reading.startsWith("script") || 
-                  reading.startsWith("SCRIPT") ||
-                  reading.startsWith("style") || 
-                  reading.startsWith("STYLE")
-                  )) {
-                w = "";
-              }
-            } else {
-              w = "";
+
+      if (!s && cc == openTag) {
+
+        s = true;
+        read = "";
+        continue;
+      }
+
+      if (s) {
+        read += cc;
+
+        if (cc == closedtag) {
+
+
+          if (skiphtml) {
+
+            if (!(read.startsWith("script") ||
+              read.startsWith("SCRIPT") ||
+              read.startsWith("style") ||
+              read.startsWith("STYLE")
+            )) {
+              o = "";
             }
-          } else if (c == OPEN_TAG) { // begin a new tag, end of text
-            // process reading
-            if (w != null) {
-              w.trim();
-              for (int j = 0; j < SPECIALS.length; j++) {
-                if (w.startsWith(SPECIALS[j]))
-                  w = w.substring(1); // remove special char at the beginning
-                if (w.endsWith(SPECIALS[j]))
-                  w = w.substring(0, w.length() - 1);// remove special char at
-                                                     // the end
-                
-                // replace all remaining special chars by spaces
-                w = w.replaceAll(SPECIALS[j], " ");
-              }
+          } else {
+            o = "";
+          }
+        } else if (cc == openTag) {
 
-              if (!w.equals("")) {
-                String[] witems = w.split(" ");
-                for (int j = 0; j < witems.length; j++) {
-                  String witem = witems[j].trim();
-                  if (!witem.equals("")) {
-                    //for (int x = 0; x < JUNK_CHARS.length; x++) 
-                    //  witem = witem.replaceAll(JUNK_CHARS[x], "");
-                    
-                    documentwords.add(witem);
-                  }
+          if (o != null) {
+            o.trim();
+            for (int j = 0; j < strings.length; j++) {
+              if (o.startsWith(strings[j]))
+                o = o.substring(1);
+              if (o.endsWith(strings[j]))
+                o = o.substring(0, o.length() - 1)
+
+
+              o = o.replaceAll(strings[j], " ");
+            }
+
+            if (!o.equals("")) {
+              String[] witems = o.split(" ");
+              for (int j = 0; j < witems.length; j++) {
+                String witem = witems[j].trim();
+                if (!witem.equals("")) {
+
+
+                  vector.add(witem);
                 }
               }
-              // reset word
-              w = null;
             }
-            reading = null;
-            // continue to parse from c
-            skip = false; // stop skipping
-            // decrement i so that we start from c from the next iteration
-            i--;
-          } else if (w != null) {
-            // still inside a text
-            // update word
-            if (c != NEW_LINE)
-              w += c;
+
+            o = null;
           }
-          // continue; // skip
+          read = null;
+
+          s = false;
+
+          i--;
+        } else if (o != null) {
+
+
+          if (cc != c1)
+            o += cc;
         }
+
       }
-    } // end body processing
-
-    // create a generator from the body words
-    // note: we could have used the built-in Vector.iterator() method here
-    // instead.
-    if (documentwords != null)
-      return new WordGenerator(documentwords);
-    else
-      return null;
+    }
   }
 
-  public String toString() {
-    return title();
-  }
-  
+
+  if (vector != null)
+    return new WordGenerator(vector);
+  else
+    return null;
+}
+
+public String toString() {
+  return takeTitle();
+}
+
+/**
+ * @overview A generator implementation that is utilized by <code>Doc.words()</code> to
+ * return a word iterator of a document.
+ */
+class WordGenerator implements Iterator {
+  Vector words;
+  int currWordIndex = -1;
+
   /**
-   * @overview A generator implementation that is utilized by <code>Doc.words()</code> to
-   *           return a word iterator of a document.
-   *
-   *
+   * @param words a word vector
+   * @requires <code>words</code> should not be <code>null</code>
    */
-  class WordGenerator implements Iterator {
-    Vector words;
-    int currWordIndex = -1;
-
-    /**
-     * 
-     * @param words
-     *          a word vector
-     * @requires <code>words</code> should not be <code>null</code>
-     */
-    WordGenerator(Vector words) {
-      this.words = words;
-    }
-
-    public boolean hasNext() {
-      return (currWordIndex < words.size() - 1);
-    }
-
-    public Object next() {
-      currWordIndex++;
-      return words.get(currWordIndex);
-    }
-
-    /**
-     * @effects throws
-     *          <code>NotImplementedException<code> since <code>Doc</code> is
-     *          immutable
-     * 
-     */
-    public void remove() throws NotImplementedException {
-      // not implemented
-      throw new NotImplementedException(
-          "WordGenerator.remove: Document is immutable");
-    }
+  WordGenerator(Vector words) {
+    this.words = words;
   }
+
+  public boolean hasNext() {
+    return (currWordIndex < words.size() - 1);
+  }
+
+  public Object next() {
+    currWordIndex++;
+    return words.get(currWordIndex);
+  }
+
+  /**
+   * @effects throws
+   */
+  public void remove() throws NotImplementedException {
+    throw new NotImplementedException("remove WordGenerator effect: Doc is immutable");
+  }
+}
 }

@@ -269,7 +269,7 @@ public class ProgStudentMan {
    */
   private void displaySearchReport(Query q) {
     // get matches
-    Iterator matches = q.matchIterator();
+    Iterator matches = q.match();
 
     // write header
     System.out.println("Query: " + Arrays.toString(q.keys()));
@@ -280,7 +280,7 @@ public class ProgStudentMan {
       int col1Len = 0;
       while (matches.hasNext()) {
         DocumentCount m = (DocumentCount) matches.next();
-        String t = m.getDoc().title();
+        String t = m.getdoc().takeTitle();
         if (t.length() > col1Len) col1Len = t.length();
       }
 
@@ -291,12 +291,12 @@ public class ProgStudentMan {
       System.out.println(hr);
       System.out.printf(rowFormat, "Documents", "Sum freqs");
       System.out.println(hr);
-      matches = q.matchIterator();
+      matches = q.match();
       
       DocumentCount m;
       while (matches.hasNext()) {
         m = (DocumentCount) matches.next();
-        System.out.printf(rowFormat, m.getDoc().title(), m.getCount());
+        System.out.printf(rowFormat, m.getdoc().takeTitle(), m.takeCount());
       }
       
       System.out.println(hr);
@@ -447,7 +447,7 @@ public class ProgStudentMan {
   public void addStudent(Student c) {
 	 objects.add(c);
 	 Doc doc = new Doc(c.toHtmlDoc());
-	 engine.addDoc(doc);
+	 engine.plusDoc(doc);
   }
   
   /**
@@ -463,9 +463,9 @@ public class ProgStudentMan {
   if (words == null) throw new NotPossibleException("ProgStudentMan.search: keyword should not be NULL");
 	if (words.length == 0) throw new NotPossibleException("ProgStudentMan.search: cannot find the keyword");
 	  
-	  Query query  = engine.queryFirst(words[0]);
+	  Query query  = engine.takeOne(words[0]);
 	  for (int i = 1; i < words.length; i++) {
-		  query = engine.queryMore(words[i]);
+		  query = engine.takemore(words[i]);
 	  }
 	  return query;
   }

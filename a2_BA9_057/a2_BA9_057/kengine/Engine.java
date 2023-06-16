@@ -7,205 +7,137 @@ import java.util.Vector;
 import utils.NotPossibleException;
 
 /**
- * @overview An engine has a state as described in the search engine data model. 
- *           The methods throw the NotPossibleException when there is a problem; the exception
- *           contains a string explaining the problem. All instance methods modify the state of
- *           <code>this</code>.
- *           
- * 
- * @see "Program Development in Java", pgs: 313, 316-323, 365
- * 
- * @version 4.0 implement the full logic
- *
+ * @version 2.0
+ * @overview According to the search engine data model, an engine has a state.
+ * When there is a problem, the methods throw the NotPossibleException, which provides a string describing the issue. The status of this is changed by all instance methods.
  */
 public class Engine {
-  private TitleTable titleTable;
-  private WordTable wordTable;
-  private Query query;
-  
-  //dmle: use Vector instead of array to ease maintenance  
-  // private String[] urls;
-  private Vector urls;
+private TitleTable table;
+private WordTable words;
+private Query q;
 
-  /**
-   * Constructor method 
-   * 
-   * @effects if uninteresting words cannot be retrieved from the persistent state
-   *          throw <code>NotPossibleException</code> else creates NK and initialises
-   *          the application state appropriately
-   */
-  public Engine() throws NotPossibleException {
-    titleTable = new TitleTable();
-    // the exception is thrown by this line
-    wordTable = new WordTable();
-    urls = new Vector();
+//dmle: use Vector instead of array to ease maintenance
+// private String[] urls;
+private Vector vector;
+
+/**
+ * Constructor
+ *
+ * @effects Throw a NotPossibleException if the persistent state cannot be used to retrieve uninteresting words. Alternatively, NK is created and the application state is suitably initialized.
+ */
+public Engine() throws NotPossibleException {
+  table = new TitleTable();
+  // the exception is thrown by this line
+  words = new WordTable();
+  vector = new Vector();
+}
+
+/**
+ * a process for producing a code>Query/code> object that contains the documents * that match a specified keyword code>w/code>.
+ *
+ * @param w search w
+ * @effects If the keyword "w" is not a word or is an uninteresting word, then a "NotPossibleException" is thrown; otherwise, a "Query" object is returned that contains the documents that match the keyword.
+ * @version 4.0
+ */
+public Query takeOne(String w) throws NotPossibleException {
+  if (w != null)
+    w = Helpers.canon(w);
+
+  // check w
+  if (words.lookup(w) == null) {
+    throw new NotPossibleException("The selected term is either uninteresting or not present in any documents: \n" + w);
+  }
+  q = new Query(words, w);
+  return q;
+}
+
+/**
+ * a way to search for documents that match a specific codeQuery</code> object for * those that has the extra keyword "w" in it.
+ *
+ * @effects If "w" is not a word or "w" is a boring word, then "NotPossibleException" is thrown, but if "w" is a word, then "returns" * an updated "code>Query" object with all of the documents matching all keywords.
+ * @version 4.0
+ */
+public Query takemore(String w) throws NotPossibleException {
+  if (w != null)
+    w = Helpers.canon(w);
+  if (words.lookup(w) == null) {
+    throw new NotPossibleException("The chosen term is either boring or absent from any papers." + w);
+  }
+  q.addKey(w);
+  return q;
+}
+
+/**
+ * @param t the title to retrieve
+ * @effects Throw a "NotPossibleException" if "code>t" is not in the "TitleTable"; else, return the "Doc" object with "code>t" as the title.
+ */
+public Doc findDoc(String t) throws NotPossibleException {
+  Doc d = table.lookup(t);
+  if (d == null)
+    throw new NotPossibleException("title could not be found: " + t);
+  return d;
+}
+
+/**
+ * store them for query processing.
+ *
+ * @param u the URL of a remote web site
+ * @effects code>NotPossibleException/code> is thrown if code>u/code> is not a URL for a website holding documents or if code>u/code> is one of the existing URLs; otherwise, each new document is added using the appropriate method to the WordTable and TitleTable. Return an empty code>Query/code> object if there was no query running; otherwise, return an updated object with any matching new documents.
+ * @version 4.0
+ */
+public Query addMoreD(String u) throws NotPossibleException {
+  if (vector.contains(u))
+    throw new NotPossibleException("URL has been used: " + u);
+  Iterator docs = Comm.takeDocuments(u);
+  Doc d;
+  Hashtable h;
+  while (docs.hasNext()) {
+    d = (Doc) docs.next();
+    table.addDoc(d);
+    h = words.addDoc(d);
+
+    if (q != null) {
+      q.addDoc(d, h);
+    }
   }
 
-  /**
-   * A method to create a <code>Query</code> object containing the matching documents 
-   * of a given keyword <code>w</code>
-   * 
-   * @param w   a keyword to search
-   * @effects   if <code>w</code> is not a word or <code>w</code> is an uninteresting word 
-   *            then throws <code>NotPossibleException</code>, else returns 
-   *            a <code>Query</code> object containing the documents matching the keyword
-   * @version 4.0
-   */
-  public Query queryFirst(String w) throws NotPossibleException {
-    if (w != null) 
-      w = Helpers.canon(w);
-    
-    // check w
-    if (wordTable.lookup(w) == null) {
-      throw new NotPossibleException("Engine.queryFirst: the specified word is either not found in any documents or uninteresting: " + w);
-    }
-    
-    query = new Query(wordTable, w);
-    return query;
+  if (q == null) {
+    q = new Query();
   }
-  
-  /**
-   * A method to query the matching documents of an existing <code>Query</code> object for  
-   * those that contains an additional keyword <code>w</code>
-   * 
-   * @param w   a keyword to search
-   * @effects   if <code>w</code> is not a word or <code>w</code> is an uninteresting word 
-   *            then throws <code>NotPossibleException</code>, else returns 
-   *            an updated <code>Query</code> object containing the documents matching all keywords
-   * @version 4.0
-   */
-  public Query queryMore(String w) throws NotPossibleException {
-    if (w != null) 
-      w = Helpers.canon(w);
+  vector.add(u);
+  return q;
+}
 
-    // check w
-    if (wordTable.lookup(w) == null) {
-      throw new NotPossibleException("Engine.queryMore: the specified word is either not found in any documents or uninteresting: " + w);
-    }
+public Iterator<Doc> docIterator() {
+  if (table.isEmpty()) {
+    return null;
+  } else {
+    return table.docIterator();
+  }
+}
 
-    query.addKey(w);
-    
-    return query;
-  }
-  
-  /**
-   * A method to retrieve a <code>Doc</code> given its title.
-   * 
-   * @param t   the title of the document to retrieve
-   * @effects   if <code>t</code> is not in <code>TitleTable</code>  
-   *            then throw <code>NotPossibleException</code>, 
-   *            else return the <code>Doc</code> object with title <code>t</code>
-   */
-  public Doc findDoc(String t) throws NotPossibleException {
-    Doc d = titleTable.lookup(t);
-    
-    if (d == null) {
-      throw new NotPossibleException("Engine.findDoc: the specified title could not be found: " + t);
-    }
-    
-    return d;
-  }
-  
-  /**
-   * A method to retrieve documents from remote web site <code>u</code> and store 
-   * them for query processing.
-   * 
-   * @param u   the URL of a remote web site
-   * @effects   if <code>u</code> is not a URL for a web site containing documents or 
-   *            <code>u</code> is one of the existing URLs throws 
-   *            <code>NotPossibleException</code>, else adds each new document to 
-   *            <code>TitleTable</code> and <code>WordTable</code> using their 
-   *            respective methods. If no query was in progress then return an empty
-   *            <code>Query</code> object, else returns an updated object that contains 
-   *            any matching new documents.
-   * @version 4.0  add each new document to the current query (if one exists)
-   */
-  public Query addDocs(String u) throws NotPossibleException {
-    if (urls.contains(u)) 
-      throw new NotPossibleException("Engine.addDocs: URL has been used: " + u);
-        
-    // use Comm.getDocs to obtain documents
-    // this method will throw exception if u is not a valid URL
-    Iterator docs = Comm.getDocs(u);
-    Doc d;
-    Hashtable h;
-    while (docs.hasNext()) {
-      d = (Doc) docs.next();
-      //addDoc(d);
-      titleTable.addDoc(d);
-      h = wordTable.addDoc(d);
-      
-      if (query != null) {
-        query.addDoc(d, h);
-      }
-    }
-    
-    if (query == null) {
-      query = new Query();
-    }
-    
-    // stores URL to urls 
-    urls.add(u);
-    
-    return query;
-  }  
+public String getFailkeys() {
+  return words.getNonkeys();
+}
 
-  /**
-   * @effects 
-   *  if tt is empty
-   *    return null
-   *  else
-   *    return Iterator(Doc) for documents in tt
-   *     
-   * @version 5.0 (for use in the assignment)
-   */
-  public Iterator<Doc> docIterator() {
-    if (titleTable.isEmpty()) {
-      return null;
-    } else {
-      return titleTable.docIterator();
-    }
+public String getWordTableAsString() {
+  return words.toString();
+}
+
+/**
+ * @effects If d is null, NullPointerException is thrown; otherwise, use the appropriate method to add d to this.tt and this.wt.
+ * Update this.q to include any additional documents that match if it is not null.
+ * Send this back.q
+ */
+public Query plusDoc(Doc d) throws NullPointerException {
+  if (d == null) throw new NullPointerException();
+  table.addDoc(d);
+  Hashtable htble = words.addDoc(d);
+  if (q != null) {
+    q.addDoc(d, htble);
+  } else {
+    q = new Query();
   }
-  
-  /**
-   * A method to return all none-keywords in as a string for display.
-   * 
-   * @effects return a string containing all none-keywords
-   * @note this method is not in the original design of this class
-   */
-  public String getNonkeys() {   
-    return wordTable.getNonkeys();
-  }
-  
-  /**
-   * A method to return the displayable content of the word table as string.
-   *  
-   * @effects return a string containing all the words and their <code>DocCnt</code> objects
-   * @note this method is not in the original design of this class
-   */
-  public String getWordTableAsString() {
-    return wordTable.toString();
-  }
-  
-  /**
-   * @effects
-   * if d is null
-   * throws NullPointerException
-   * else
-   * add d to this.tt and this.wt using their respective methods. 
-   * If this.q is not null
-   * update this.q to contain any new matching documents. 
-   * Return this.q
-   */
-  public Query addDoc(Doc d) throws NullPointerException {
-	  if( d == null ) throw new NullPointerException();
-	  titleTable.addDoc(d);
-	  Hashtable htble = wordTable.addDoc(d);
-	  if (query != null) {
-		 query.addDoc(d, htble);
-	  }else {
-		 query = new Query();
-	  }
-	  return this.query;
-  }
+  return this.q;
+}
 }

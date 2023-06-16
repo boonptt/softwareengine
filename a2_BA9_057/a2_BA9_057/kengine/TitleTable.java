@@ -20,54 +20,33 @@ import utils.NotPossibleException;
 public class TitleTable {
   
   // the rep of this class
-  private Hashtable<String,Doc> docs;
-  
-  /**
-   * Constructor method
-   * @effects Initialises <code>this</code> to be an empty table.
-   */
+  private Hashtable<String,Doc> stringDocHashtable;
+
   public TitleTable() {
-    docs = new Hashtable<>();
+    stringDocHashtable = new Hashtable<>();
   }
   
-  /**
-   * A method to add a new <code>Doc</code> object to <code>this</code>.
-   * 
-   * @param d   A <code>Doc</code> object to add
-   * @requires  <code>d</code> is not <code>null</code>
-   * @effects   if a document with the same title already in <code>this</code> 
-   *            throws <code>DuplicateException</code>, else adds <code>d</code> with 
-   *            its title to <code>this</code>.
-   * @version 2.0           
-   */
+
   public void addDoc(Doc d) throws DuplicateException {
-    String t = d.title();
+    String t = d.takeTitle();
     // canonical form
     t = Helpers.canon(t);
     
-    if (docs.containsKey(t)) {
+    if (stringDocHashtable.containsKey(t)) {
       throw new DuplicateException("TitleTable.addDoc: a document with same title already exists: " + t);
     }
     
-    docs.put(t, d);
+    stringDocHashtable.put(t, d);
   }
   
-  /**
-   * A method to look up a document given its title.
-   * 
-   * @param t   the title of the document to look up 
-   * @effects   if <code>t</code> is <code>null</code> or there is no document with this 
-   *            title throws <code>NotPossibleException</code>, else returns the document
-   *            with title <code>t</code>.
-   * @version 2.0 
-   */
+
   public Doc lookup(String t) throws NotPossibleException {
     Doc d = null;
     if (t != null) {
       // canonical form
       String ct = Helpers.canon(t);
 
-      d = docs.get(ct);
+      d = stringDocHashtable.get(ct);
     }
     
     if (d == null)
@@ -77,31 +56,21 @@ public class TitleTable {
   }
 
   /**
-   * @effects 
-   *  if this is empty
-   *    return null
-   *  else
-   *    return Iterator(Doc) for documents in this
-   *     
-   * @version 5.0 (for use in the assignment)
+
+   * @version 5.0
    */
   public Iterator<Doc> docIterator() {
     if (isEmpty())
       return null;
     else
-      return docs.values().iterator();
+      return stringDocHashtable.values().iterator();
   }
 
   /**
-   * @effects 
-   *  if this is empty
-   *    return true
-   *  else
-   *    return false
-   *     
+
    * @version 5.0 (for use in the assignment)
    */
   public boolean isEmpty() {
-    return docs.isEmpty();
+    return stringDocHashtable.isEmpty();
   }
 }

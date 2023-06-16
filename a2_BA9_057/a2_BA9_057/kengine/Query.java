@@ -8,232 +8,136 @@ import utils.NotPossibleException;
 
 
 /**
- * @overview Represents a user query
- * 
- * @see "Program development in Java", pgs 314,322,326-332,365
- * 
  * @version 4.0 implements full code
- * 
  */
 public class Query {
-  private WordTable wt; // reference to the engine's word table
-  private Vector matches; // document matches
-  // dmle: use Vector instead of array
-  // private String[] keys; // the keywords of this query
-  private Vector keys;
+  private WordTable table;
+  private Vector vector;
+  private Vector vector1;
 
-  /**
-   * Constructor method to create an empty <code>Query</code>
-   * 
-   * @version 4.0
-   */
   public Query() {
-    //
-    matches = new Vector();
-    keys = new Vector();
+    vector = new Vector();
+    vector1 = new Vector();
   }
 
-  /**
-   * Constructor method to create a new <code>Query</code> from a single keyword
-   * 
-   * @param word
-   *          a keyword to create the query with
-   * @param wordTable
-   *          the <code>WordTable</code> object of the engine
-   * @requires <code>w</code> and <code>wt</code> are not <code>null</code>
-   * @effects make a <code>Query</code> for the single keyword <code>w</code>.
-   * 
-   * @version 4.0
-   * @see "Program development in Java", pg 329
-   */
-  public Query(WordTable wordTable, String word) {
-    // call this to initialise rep
+  public Query(WordTable table, String w) {
     this();
-    
-    this.wt = wordTable;
-
-    // look up the key in the word table
-    // sort the matches using quick sort
-    Vector newDocs = wordTable.lookup(word);
-
-    if (newDocs != null) {
-      // must clone newDocs so that changes to the doc counts of its objects
-      // do not affect the word table
-      Vector docClones = new Vector();
-      for (Iterator it = newDocs.iterator(); it.hasNext();) {
-        DocumentCount dc = (DocumentCount) ((DocumentCount) it.next()).clone();
-        docClones.add(dc);
+    this.table = table;
+    Vector lookup = table.lookup(w);
+    if (lookup != null) {
+      Vector cl = new Vector();
+      for (Iterator it = lookup.iterator(); it.hasNext();) {
+        DocumentCount copy = (DocumentCount) ((DocumentCount) it.next()).copy();
+        cl.add(copy);
       }
-      matches.addAll(docClones);
-      keys.add(word);
+      vector.addAll(cl);
+      vector1.add(w);
       
-      Sorting.quickSort(matches);
+      Sorting.quickSort(vector);
     }
   }
 
   /**
-   * A method to add a new keyword to <code>this</code>.
-   * 
-   * @param w
-   *          a new keyword to add to this query
-   * @modifies <code>this</code>
-   * @effects If <code>this</code> is empty or <code>w</code> is an existing
-   *          keyword in <code>this</code> throws
-   *          <code>NotPossibleException</code>, else modifies <code>this</code>
-   *          to be a query for <code>w</code> and all the keywords already in
-   *          <code>this</code>.
-   * @version 4.0
-   * @see "Program development in Java", pg 329
-   * 
+   * A method to add a new keyword
+   * @effects If "code>this" is empty or "code>w" is a keyword already in "code>this" (throws "NotPossibleException"); else, "code>this" is modified to be a query for "code>w" and all of the keywords already in "code>this"
    */
-  public void addKey(String w) throws NotPossibleException {
-    if (matches.isEmpty() || keys.contains(w))
-      throw new NotPossibleException(
-          "Query.addKey: query is empty OR keyword already exists in query: "
-              + w);
-
-    keys.add(w);
-
-    // look up the new query in word table
-    // store the information about matches in a hash table
-    Vector newDocs = wt.lookup(w);
-
-    // for each current match, look up the document in the hash table and if it
-    // is there, add it to the matches vector
-    DocumentCount currentMatch, newDoc;
-    boolean foundNewMatch = false;
-
-    for (int i = 0; i < matches.size(); i++) {
-      currentMatch = (DocumentCount) matches.get(i);
-      boolean containsKeyword = false;  // whether or not the current match contains the new keyword
+  public void addKey(String string) throws NotPossibleException {
+    if (vector.isEmpty() || vector1.contains(string))
+      throw new NotPossibleException("query is empty OR keyword already exists in query: "
+              + string);
+    vector1.add(string);
+    Vector newDocs = table.lookup(string);
+    DocumentCount mat, newDoc;
+    boolean f = false;
+    for (int i = 0; i < vector.size(); i++) {
+      mat = (DocumentCount) vector.get(i);
       INNER: for (Iterator dit = newDocs.iterator(); dit.hasNext();) {
         newDoc = (DocumentCount) dit.next();
-        if (currentMatch.getDoc().equals(newDoc.getDoc())) {
-          // found a new match, update the sum of count in the vector
-          currentMatch.addCount(newDoc.getCount());
+        if (mat.getdoc().equals(newDoc.getdoc())) {
+          mat.add(newDoc.takeCount());
           containsKeyword = true;
-          if (!foundNewMatch)
-            foundNewMatch = true;
+          if (!f)
+            f = true;
           break INNER;
         }
       }
       
       if (!containsKeyword) {
-        // remove current match
-        matches.removeElementAt(i);
+        vector.removeElementAt(i);
         i--;
       }
     }
 
-    // sort the vector using quick-sort
-    if (foundNewMatch) {
-      Sorting.quickSort(matches);
+    if (f) {
+      Sorting.quickSort(vector);
     }
   }
 
   /**
-   * A method to add a new <code>Doc</code> object to <code>this</code>.
-   * 
-   * @param d
-   *          the <code>Doc</code> object to add
-   * @param h
-   *          a <code>Hashtable</code> that maps interesting words in
-   *          <code>d</code> to their frequencies in <code>d</code>.
-   * @requires <code>d</code> and <code>h</code> are not <code>null</code>
-   * @modifies <code>this</code>
-   * @effects If <code>this</code> is not empty and <code>d</code> contains all
-   *          the keywords of <code>this</code> then adds <code>d</code> and its
-   *          keyword entries in <code>h</code> to <code>matches</code> as a
-   *          query result, else does nothing
-   * 
+   * A method to add a new Doc
+   * @param hashtable
+    maps interesting words in frequencies in <code>d</code>.
+   * @effects Adds "code>d" and its keyword entries in "code>h" to "code>matches" as a query result if "code>this" is not empty and "code>d" includes all of "code>this's" keywords; otherwise, does nothing.
    * @version 4.0
    */
-  public void addDoc(Doc d, Hashtable h) {
-    if (!keys.isEmpty()) {
-      String k;
-      Integer c;
-      int sum = 0;
-      for (Iterator kit = keys.iterator(); kit.hasNext();) {
-        k = (String) kit.next();
-        c = (Integer) h.get(k);
-        if (c == null) {
-          // d does not contain all keywords of this
+  public void addDoc(Doc content, Hashtable hashtable) {
+    if (!vector1.isEmpty()) {
+      String string;
+      Integer integer;
+      int sumof = 0;
+      for (Iterator kit = vector1.iterator(); kit.hasNext();) {
+        string = (String) kit.next();
+        integer = (Integer) hashtable.get(string);
+        if (integer == null) {
           return;
         } else {
-          sum += c.intValue();
+          sumof += integer.intValue();
         }
       }
-
-      // if we get here then d satisfies the query
-      DocumentCount dc = new DocumentCount(d, sum);
-      matches.add(dc);
-      DocumentCount cm;
-
-      // add dc to a position in the matches vector
-      for (int i = 0; i < matches.size(); i++) {
-        cm = (DocumentCount) matches.get(i);
-        if (cm.getCount() < dc.getCount()) {
-          matches.insertElementAt(dc, i);
+      DocumentCount documentCount = new DocumentCount(content, sumof);
+      vector.add(documentCount);
+      DocumentCount count;
+      for (int i = 0; i < vector.size(); i++) {
+        count = (DocumentCount) vector.get(i);
+        if (count.takeCount() < documentCount.takeCount()) {
+          vector.insertElementAt(documentCount, i);
           break;
         }
       }
     }
   }
 
-  /**
-   * A method to read all the keywords of this query.
-   * 
-   * @effects returns all the keywords of <code>this</code>.
-   * @version 4.0
-   */
   public String[] keys() {
-    return (String[]) keys.toArray(new String[keys.size()]);
+    return (String[]) vector1.toArray(new String[vector1.size()]);
   }
 
-  /**
-   * A method to return count of matching documents.
-   * 
-   * @effects returns a count of the documents that match the query
-   * @version 4.0
-   */
   public int size() {
-    return matches.size();
+    return vector.size();
   }
 
   /**
-   * A method to return a matching document of this query.
-   * 
-   * @param i
-   *          the index of the matching document to return
-   * @effects if <code>0 <= i < size</code> then returns the ith matching
-   *          document in <code>matches</code>, else throws
-   *          <code>IndexOutOfBoundsException</code>.
-   * @version 4.0
+   * A method to  matching document
    */
-  public Doc fetch(int i) throws IndexOutOfBoundsException {
-    if (0 <= i && i < size()) {
-      return ((DocumentCount) matches.get(i)).getDoc();
+  public Doc fetch(int docu) throws IndexOutOfBoundsException {
+    if (0 <= docu && docu < size()) {
+      return ((DocumentCount) vector.get(docu)).getdoc();
     } else
-      throw new IndexOutOfBoundsException(
-          "Query.fetch: document index is invalid " + i);
+      throw new IndexOutOfBoundsException(" document index is invalid " +
+        docu
+      );
   }
   
-  /**
-   * A method to return keywords and matches of <code>this</code> (if any) as string.
-   * 
-   * @version 4.0
-   */
   @Override
   public String toString() {
     StringBuffer sb = new StringBuffer();
-    if (keys != null && !keys.isEmpty()) {
+    if (vector1 != null && !vector1.isEmpty()) {
       sb.append("Query: ");
-      sb.append(keys.toString());
+      sb.append(vector1.toString());
     }
     
-    if (matches != null && !matches.isEmpty()) {
-      sb.append("\nMatches [").append(matches.size()).append("]:\n");
-      sb.append(matches.toString());
+    if (vector != null && !vector.isEmpty()) {
+      sb.append("\nMatches [").append(vector.size()).append("]:\n");
+      sb.append(vector.toString());
     }
     
     if (sb.length() > 0) 
@@ -242,18 +146,9 @@ public class Query {
       return null;
   } 
   
-  /**
-   * @effect 
-   * if matches == null
-   * 	return null
-   * else 
-   * 	return Iterator of query matches 
-   * @version 4.0
-   */
-  public Iterator matchIterator() {
+  public Iterator match() {
 	  if(size() == 0) 
 		  return null;
-	  Iterator<Doc> docs = matches.iterator();
-	  return docs;
+	  return vector.iterator();;
   }
 }
